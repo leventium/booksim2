@@ -1,8 +1,10 @@
+#!/usr/bin/env python3
+import argparse
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import StrEnum
 from itertools import product
-from threading import Thread
+from threading import Thread, Lock
 from queue import Queue
 import subprocess as sp
 from tqdm import tqdm
@@ -159,18 +161,21 @@ class SimRunner:
                f"tee {'result_'+config.get_topology_name()}", shell=True)
 
 
-def generate_configs() -> list[ISimConfig]:
+def generate_configs() -> tuple[Queue[ISimConfig], int]:
     indep_confs = []
     for args in product(list(RoutingFunc), list(TrafficType), [5]):
         indep_confs.append(TopoIndependentConfig(*args))
 
-    confs = []
+    cnt = 0
+    confs = Queue()
     for args in product(range(2, 17), [2], indep_confs):
-        confs.append(MeshConfig(*args))
-        confs.append(TorusConfig(*args))
+        confs.put(MeshConfig(*args))
+        confs.put(TorusConfig(*args))
+        cnt += 2
     for args in product(range(2, 12), [3], indep_confs):
-        confs.append(MeshConfig(*args))
-        confs.append(TorusConfig(*args))
+        confs.put(MeshConfig(*args))
+        confs.put(TorusConfig(*args))
+        cnt += 2
 
     circulant_links = [[2**i for i in range(0, j, 2)] for j in range(1, 11, 2)]
     for args in product(range(4, 2000, 50), circulant_links, indep_confs):
@@ -178,10 +183,48 @@ def generate_configs() -> list[ISimConfig]:
             topo = CirculantConfig(*args)
         except ValueError:
             continue
-        confs.append(topo)
+        confs.put(topo)
+        cnt += 1
     
-    return confs
+    return confs, cnt
+
+
+@dataclass
+class ProgressBarSync:
+    bar: tqdm
+    mx: Lock
+
+
+def worker(exec_path: str, tasks: Queue[ISimConfig], bar: ProgressBarSync):
+    sim = SimRunner(exec_path)
+    while not tasks.empty():
+        sim.sim(tasks.get())
+        bar.mx.acquire()
+        bar.bar.update()
+        bar.mx.release()
+        tasks.task_done()
 
 
 if __name__ == "__main__":
-    print(len(generate_configs()))
+    parser = argparse.ArgumentParser(
+        prog="Booksim massive runner",
+        description="Runs multiple instances of booksim simultaneously",
+    )
+    parser.add_argument("-j", "--jobs", type=int)
+    parser.add_argument("-e", "--exec-path", type=str)
+    args = parser.parse_args()
+
+    tasks, cnt = generate_configs()
+    bar = ProgressBarSync(tqdm(total=cnt), Lock())
+    threads: Thread = []
+
+    for _ in range(args.jobs):
+        t = Thread(target=worker, args=(args.exec_path, tasks, bar))
+        t.start()
+        threads.append(t)
+
+    tasks.join()
+    for t in threads:
+        t.join()
+
+    bar.bar.close()

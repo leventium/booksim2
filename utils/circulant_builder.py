@@ -58,7 +58,7 @@ if __name__ == "__main__":
         description="Build description of specified circulant "
         "topology in the booksim2 anynet format",
     )
-    parser.add_argument("-N", "--num-nodes", type=int)
+    parser.add_argument("-n", "--num-nodes", type=int)
     parser.add_argument("-l", "--links", type=str)
     args = parser.parse_args()
 
