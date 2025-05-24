@@ -14,6 +14,8 @@ from circulant_builder import Circulant
 
 class RoutingFunc(StrEnum):
     min = "min"
+    dor = "dor"
+    dim_order = "dim_order"
 
 
 class TrafficType(StrEnum):
@@ -52,6 +54,9 @@ vc_buf_size      = 4;
             traffic_type=conf.traffic,
             sim_count=conf.sim_count
         )
+    
+    def get_indep_namepart(self, conf: TopoIndependentConfig):
+        return f"_F{conf.routing_func}_T{conf.traffic}_S{conf.sim_count}"
 
     @abstractmethod
     def create_config(self) -> str:
@@ -82,7 +87,7 @@ network_file = {anynet_filename};
         res = f"circulant_c{self.num_nodes}"
         for link in self.links:
             res += f"_{link}"
-        return res
+        return res + self.get_indep_namepart(self.config)
 
     def create_config(self):
         config_filename = "config_" + self.get_topology_name()
@@ -100,6 +105,15 @@ network_file = {anynet_filename};
 
 
 class CellTopoConfig(ISimConfig):
+    def __init__(self, k: int, n: int, conf: TopoIndependentConfig):
+        """
+        K - Number of routers per dimension
+        N - Network dimensions
+        """
+        self.k = k
+        self.n = n
+        self.conf = conf
+
     @abstractmethod
     def _get_topo_name(self) -> str:
         pass
@@ -111,29 +125,22 @@ k = {k};
 n = {n};
 
 """
-        return topo_config.format(topo=self._get_topo_name())
-
-    def __init__(self, k: int, n: int, conf: TopoIndependentConfig):
-        """
-        K - Number of routers per dimension
-        N - Network dimensions
-        """
-        self.k = k
-        self.n = n
-        self.conf = conf
-
-    def create_config(self):
-        config_name = f"config_{self.get_topology_name()}"
-        config_content = self._get_topo_config().format(
+        return topo_config.format(
+            topo=self._get_topo_name(),
             k=self.k,
             n=self.n,
-        ) + self._fill_base_config(self.conf)
+        )
+
+    def create_config(self):
+        config_name = "config_" + self.get_topology_name()
+        config_content = self._get_topo_config() + self._fill_base_config(self.conf)
         with open(config_name, "w") as file:
             file.write(config_content)
         return config_name
-    
+
     def get_topology_name(self):
-        return f"{self._get_topo_name()}_k{self.k}_n{self.n}"
+        return (f"{self._get_topo_name()}_k{self.k}_n{self.n}"
+                + self.get_indep_namepart(self.conf))
 
 
 class MeshConfig(CellTopoConfig):
@@ -157,13 +164,13 @@ class SimRunner:
         self.exec = booksim_exec[2:] if booksim_exec.startswith("./") else booksim_exec
 
     def sim(self, config: ISimConfig):
-        sp.run(f"./{self.exec} {config.create_config()} 2>&1 | "
-               f"tee {'result_'+config.get_topology_name()}", shell=True)
+        sp.run(f"./{self.exec} {config.create_config()} 2>&1 > "
+               f"result_{config.get_topology_name()}", shell=True)
 
 
 def generate_configs() -> tuple[Queue[ISimConfig], int]:
     indep_confs = []
-    for args in product(list(RoutingFunc), list(TrafficType), [5]):
+    for args in product(list(RoutingFunc), list(TrafficType), [1]):
         indep_confs.append(TopoIndependentConfig(*args))
 
     cnt = 0
@@ -180,10 +187,10 @@ def generate_configs() -> tuple[Queue[ISimConfig], int]:
     circulant_links = [[2**i for i in range(0, j, 2)] for j in range(1, 11, 2)]
     for args in product(range(4, 2000, 50), circulant_links, indep_confs):
         try:
-            topo = CirculantConfig(*args)
+            c = CirculantConfig(*args)
         except ValueError:
             continue
-        confs.put(topo)
+        confs.put(c)
         cnt += 1
     
     return confs, cnt
@@ -210,7 +217,7 @@ if __name__ == "__main__":
         prog="Booksim massive runner",
         description="Runs multiple instances of booksim simultaneously",
     )
-    parser.add_argument("-j", "--jobs", type=int)
+    parser.add_argument("-j", "--jobs", type=int, default=4)
     parser.add_argument("-e", "--exec-path", type=str)
     args = parser.parse_args()
 
