@@ -221,9 +221,11 @@ if __name__ == "__main__":
     parser.add_argument("-e", "--exec-path", type=str)
     args = parser.parse_args()
 
+    print("Preparing configurations...")
     tasks, cnt = generate_configs()
+    print("Starting simulations...")
     bar = ProgressBarSync(tqdm(total=cnt), Lock())
-    threads: Thread = []
+    threads: list[Thread] = []
 
     for _ in range(args.jobs):
         t = Thread(target=worker, args=(args.exec_path, tasks, bar))
