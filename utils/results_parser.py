@@ -91,7 +91,7 @@ class CirculantTopo:
         return self.links == value.links
 
     def get_topo_name(self) -> str:
-        res = f"C({self.num_nodes};"
+        res = f"C({"N" if self.num_nodes == 0 else self.num_nodes};"
         for i in range(len(self.links)):
             res += str(self.links[i])
             if i != len(self.links) - 1:
@@ -212,14 +212,17 @@ def plot_latency(data: list[SimRecord], hops=False):
             if d.id.topo == topo and d.id.traffic_type == traffic and is_route_func_ok(type(d.id.topo), d.id.routing_func) and d.id.topo.get_num_nodes() < 1400:
                 x.append(d.id.topo.get_num_nodes())
                 y.append(d.res.hops_avg if hops else d.res.network_lat.avg)
-        ax.plot(x, y, label=topo.get_topo_name())
+        ax.plot(x, y, marker="o", label=topo.get_topo_name())
     ax.set_xlabel("Number of Nodes")
     ax.set_ylabel("Hops Average (number of hops)" if hops else "Network Latency (cycles)")
     ax.set_title("Hops" if hops else "Latency")
+    ax.set_xlim(left=0, right=1400)
+    ax.set_ylim(bottom=0, top=130)
+    ax.grid(True)
     ax.legend()
     plt.show()
 
 
 if __name__ == "__main__":
     data = parse_results()
-    plot_latency(data, True)
+    plot_latency(data, False)
