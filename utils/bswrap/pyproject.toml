@@ -1,0 +1,18 @@
+[project]
+name = "bswrap"
+version = "0.1.0"
+description = "The BookSim wrapper for simultaneous simulation run and data collection"
+authors = [
+    {name = "leventium",email = "leventium@users.noreply.github.com"}
+]
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "tqdm (>=4.67.1,<5.0.0)",
+    "sqlmodel (>=0.0.24,<0.0.25)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
