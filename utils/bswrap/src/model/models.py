@@ -1,4 +1,4 @@
-from sqlmodel import SQLModel, Field, Relationship, UniqueConstraint
+from sqlmodel import SQLModel, Field, Relationship
 
 
 class Topology(SQLModel, table=True):
@@ -7,25 +7,34 @@ class Topology(SQLModel, table=True):
     num_nodes: int
     links: str
 
-    results: list["Result"] = Relationship(back_populates="topo")
+    configs: list["Config"] = Relationship(back_populates="topo",
+                                           cascade_delete=True)
 
 
-class Parameters(SQLModel, table=True):
+class Config(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
+    topo_id: int | None = Field(default=None,
+                                foreign_key="topology.id",
+                                ondelete="CASCADE")
     routing_function: str
     traffic_type: str
     sim_count: int
 
-    results: list["Result"] = Relationship(back_populates="sim_params")
+    topo: Topology = Relationship(back_populates="configs")
+    result: "Result" = Relationship(
+        sa_relationship_kwargs={"uselist": False},
+        back_populates="config",
+        cascade_delete=True,
+    )
 
 
 class Result(SQLModel, table=True):
-    __table_args__ = (
-        UniqueConstraint("topo_id", "sim_params", name="topology and params unique"),
-    )
     id: int | None = Field(default=None, primary_key=True)
-    topo_id: int | None = Field(default=None, foreign_key="topology.id")
-    sim_params_id: int | None = Field(default=None, foreign_key="parameters.id")
+    config_id: int | None = Field(default=None,
+                                  foreign_key="config.id",
+                                  unique=True,
+                                  ondelete="CASCADE")
+
     packet_latency_min: float
     packet_latency_max: float
     packet_latency_avg: float
@@ -54,5 +63,4 @@ class Result(SQLModel, table=True):
     accepted_packet_size_avg: float
     hops_avg: float
 
-    topo: Topology = Relationship(back_populates="results", cascade_delete=True)
-    sim_params: Parameters = Relationship(back_populates="results", cascade_delete=True)
+    config: Config = Relationship(back_populates="result")
