@@ -1,40 +1,29 @@
-#!/usr/bin/env python3
-import argparse
-import sqlite3
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from enum import StrEnum
-from itertools import product
-from threading import Thread, Lock
-from concurrent.futures import ThreadPoolExecutor
-from queue import Queue
-import subprocess as sp
-from tqdm import tqdm
-
 from circulant_builder import Circulant
 
 
-class RoutingFunc(StrEnum):
-    min = "min"
-    dor = "dor"
-    dim_order = "dim_order"
+# class RoutingFunc(StrEnum):
+#     min = "min"
+#     dor = "dor"
+#     dim_order = "dim_order"
 
 
-class TrafficType(StrEnum):
-    uniform = "uniform"
-    bitcomp = "bitcomp"
-    bitrev = "bitrev"
-    shuffle = "shuffle"
-    transpose = "transpose"
-    tornado = "tornado"
-    neighbor = "neighbor"
-    randperm = "randperm"
+# class TrafficType(StrEnum):
+#     uniform = "uniform"
+#     bitcomp = "bitcomp"
+#     bitrev = "bitrev"
+#     shuffle = "shuffle"
+#     transpose = "transpose"
+#     tornado = "tornado"
+#     neighbor = "neighbor"
+#     randperm = "randperm"
 
 
 @dataclass
 class TopoIndependentConfig:
-    routing_func: RoutingFunc
-    traffic: TrafficType
+    routing_func: str
+    traffic: str
     sim_count: int
 
 
@@ -84,6 +73,23 @@ network_file = {anynet_filename};
         self.num_nodes = num_nodes
         self.links = links
         self.config = config
+
+    @staticmethod
+    def new_config(
+            num_nodes: int,
+            links: str,
+            routing_func: str,
+            traffic_type: str,
+            sim_count: int) -> ISimConfig:
+        return CirculantConfig(
+            num_nodes,
+            list(map(int, links.split(","))),
+            TopoIndependentConfig(
+                routing_func,
+                traffic_type,
+                sim_count,
+            ),
+        )
 
     def get_topology_name(self) -> str:
         res = f"circulant_c{self.num_nodes}"
@@ -151,7 +157,7 @@ class MeshConfig(CellTopoConfig):
 
     def _get_topo_name(self):
         return "mesh"
-    
+
 
 class TorusConfig(CellTopoConfig):
     def __init__(self, k, n, conf):
@@ -161,91 +167,28 @@ class TorusConfig(CellTopoConfig):
         return "torus"
 
 
-class SimRunner:
-    def __init__(self, booksim_exec: str):
-        self.exec = booksim_exec[2:] if booksim_exec.startswith("./") else booksim_exec
-
-    def sim(self, config: ISimConfig) -> sp.CompletedProcess: # TODO: SimResult must be returned
-        return sp.run(
-            f"./{self.exec} {config.create_config()} 2>&1",
-            shell=True,
-            capture_output=True,
-        )
-
-
-def generate_configs() -> list[ISimConfig]:
-    indep_confs = []
-    for args in product(list(RoutingFunc), list(TrafficType), [1]):
-        indep_confs.append(TopoIndependentConfig(*args))
-
-    # cnt = 0
-    # confs = Queue()
-    confs = []
-    for args in product(range(2, 17), [2], indep_confs):
-        confs.append(MeshConfig(*args))
-        confs.append(TorusConfig(*args))
-        # cnt += 2
-    for args in product(range(2, 12), [3], indep_confs):
-        confs.append(MeshConfig(*args))
-        confs.append(TorusConfig(*args))
-        # cnt += 2
-
-    circulant_links = [[2**i for i in range(0, j, 2)] for j in range(1, 11, 2)]
-    for args in product(range(4, 2000, 50), circulant_links, indep_confs):
-        try:
-            c = CirculantConfig(*args)
-        except ValueError:
-            continue
-        confs.append(c)
-        # cnt += 1
-    
-    return confs
-
-
-@dataclass
-class ProgressBarSync:
-    bar: tqdm
-    mx: Lock
-
-
-def worker(exec_path: str, task: ISimConfig, bar: ProgressBarSync):
-    sim = SimRunner(exec_path).sim(task)
-    with bar.mx:
-        bar.bar.update()
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        prog="Booksim massive runner",
-        description="Runs multiple instances of booksim simultaneously",
+def new_cell_config(
+        cls,
+        num_nodes: int,
+        links: str,
+        routing_func: str,
+        traffic_type: str,
+        sim_count: int) -> ISimConfig:
+    parsed_links = list(map(int, links.split(",")))
+    return cls(
+        parsed_links[0],
+        parsed_links[1],
+        TopoIndependentConfig(
+            routing_func,
+            traffic_type,
+            sim_count,
+        ),
     )
-    parser.add_argument("-j", "--jobs", type=int, default=4)
-    parser.add_argument("-e", "--exec-path", type=str)
-    args = parser.parse_args()
 
-    print("Preparing configurations...")
-    tasks = generate_configs() # TODO: FIX
-    print("Starting simulations...")
-    # bar = ProgressBarSync(tqdm(total=len(tasks)), Lock())
-    bar = tqdm(total=len(tasks))
-    # threads: list[Thread] = []
 
-    with ThreadPoolExecutor(max_workers=args.jobs) as pool:
-        sim_results = pool.map(
-            lambda task: SimRunner(args.exec_path).sim(task), # TODO: add tqdm bar
-            tasks,
-        )
+def new_mesh_config(*args, **kwargs) -> ISimConfig:
+    return new_cell_config(MeshConfig, *args, **kwargs)
 
-    for sim_res in sim_results:
-        pass
 
-    # for _ in range(args.jobs):
-    #     t = Thread(target=worker, args=(args.exec_path, tasks, bar))
-    #     t.start()
-    #     threads.append(t)
-
-    # tasks.join()
-    # for t in threads:
-    #     t.join()
-
-    bar.bar.close()
+def new_torus_config(*args, **kwargs) -> ISimConfig:
+    return new_cell_config(TorusConfig, *args, **kwargs)

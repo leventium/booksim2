@@ -1,1 +1,1 @@
-from .models import Topology, Parameters, Result
+from .models import Topology, Config, Result
