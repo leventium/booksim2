@@ -34,4 +34,10 @@ if __name__ == "__main__":
     engine = create_engine("sqlite:///sim_result.db")#, echo=True)
     SQLModel.metadata.create_all(engine)
 
-    MultiSimRunner.run(args.exec_path, TASK_CONFIG, engine, args.jobs)
+    MultiSimRunner.run(
+        Path(args.exec_path).absolute(),
+        TASK_CONFIG,
+        configs_dir,
+        engine,
+        args.jobs,
+    )

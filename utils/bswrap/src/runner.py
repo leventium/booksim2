@@ -1,3 +1,4 @@
+from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
 from dataclasses import dataclass
@@ -54,7 +55,7 @@ class MultiSimRunner:
         return res
 
     @staticmethod
-    def _worker(cfg: Config, simulator: SimRunner,
+    def _worker(cfg: Config, simulator: SimRunner, cfgs_dir: Path,
                 sync_bar: ProgressBarSync) -> Result | None:
         with sync_bar.mx:
             sync_bar.bar.set_description(
@@ -64,15 +65,15 @@ class MultiSimRunner:
             sync_bar.bar.update()
 
         try:
-            return simulator.sim(cfg)
+            return simulator.sim(cfg, cfgs_dir)
         except (BadSimSummary, SimSummaryNotFound):
             logger.error(f"Error occured on config {cfg}")
 
         return None
 
     @staticmethod
-    def run(simulator_path: str, tasks: list[SimulationTask],
-            engine: Engine, jobs: int):
+    def run(simulator_path: Path, tasks: list[SimulationTask],
+            configs_dir: Path, engine: Engine, jobs: int):
         logger.info("Preparing configurations.")
         configs = MultiSimRunner._generate_configs(tasks)
 
@@ -91,7 +92,11 @@ class MultiSimRunner:
 
         with ThreadPoolExecutor(max_workers=jobs) as pool:
             results = pool.map(
-                lambda cfg: MultiSimRunner._worker(cfg, simulator, sync_bar),
+                lambda cfg: MultiSimRunner._worker(
+                    cfg,
+                    simulator,
+                    configs_dir,
+                    sync_bar),
                 configs
             )
 

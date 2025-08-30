@@ -1,6 +1,7 @@
 import re
 import io
 import subprocess as sp
+from pathlib import Path
 from model import Config, Result
 from configs import (
     ISimConfig,
@@ -26,8 +27,8 @@ class SimRunner:
     }
     _FEATURE_RE = re.compile(r"\.*= ([+-]?\d+(\.\d+(e[+-]?\d+)?)?)")
 
-    def __init__(self, booksim_exec: str):
-        self._exec = booksim_exec[2:] if booksim_exec.startswith("./") else booksim_exec
+    def __init__(self, booksim_exec: Path):
+        self._exec = booksim_exec.absolute()
     
     def _get_float_from_line(self, line: str) -> float:
         return float(self._FEATURE_RE.search(line)[1])
@@ -81,10 +82,11 @@ class SimRunner:
             config.sim_count,
         )
 
-    def sim(self, config: Config) -> Result:
+    def sim(self, config: Config, configs_dir: Path) -> Result:
         sim_config = self._get_simulator_config(config)
+        config_path = sim_config.create_config(configs_dir.absolute())
         sim_output = sp.run(
-            f"./{self._exec} {sim_config.create_config()} 2>&1",
+            f"{self._exec} {config_path} 2>&1",
             shell=True,
             capture_output=True,
         )

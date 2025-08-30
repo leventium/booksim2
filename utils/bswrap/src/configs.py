@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from pathlib import Path
 from dataclasses import dataclass
 from circulant_builder import Circulant
 
@@ -50,9 +51,9 @@ vc_buf_size      = 4;
         return f"_F{conf.routing_func}_T{conf.traffic}_S{conf.sim_count}"
 
     @abstractmethod
-    def create_config(self) -> str:
+    def create_config(self, configs_dir: Path) -> Path:
         """
-        Creates config in filesystem and returns its name.
+        Creates config in filesystem and returns its path.
         """
         pass
 
@@ -97,19 +98,19 @@ network_file = {anynet_filename};
             res += f"_{link}"
         return res + self.get_indep_namepart(self.config)
 
-    def create_config(self):
-        config_filename = "config_" + self.get_topology_name()
-        topology_filename = "topo_" + self.get_topology_name()
+    def create_config(self, configs_dir: Path) -> Path:
+        config_path = configs_dir.joinpath("config_" + self.get_topology_name())
+        topology_path = configs_dir.joinpath("topo_" + self.get_topology_name())
 
         config_content = self.topo_config.format(
-            anynet_filename=topology_filename,
+            anynet_filename=topology_path,
         ) + self._fill_base_config(self.config)
-        with open(topology_filename, "w") as file:
+        with open(topology_path, "w") as file:
             file.write(self.circulant.serialize_booksim())
-        with open(config_filename, "w") as file:
+        with open(config_path, "w") as file:
             file.write(config_content)
 
-        return config_filename
+        return config_path
 
 
 class CellTopoConfig(ISimConfig):
@@ -139,12 +140,12 @@ n = {n};
             n=self.n,
         )
 
-    def create_config(self):
-        config_name = "config_" + self.get_topology_name()
+    def create_config(self, configs_dir: Path):
+        config_path = configs_dir.joinpath("config_" + self.get_topology_name())
         config_content = self._get_topo_config() + self._fill_base_config(self.conf)
-        with open(config_name, "w") as file:
+        with open(config_path, "w") as file:
             file.write(config_content)
-        return config_name
+        return config_path
 
     def get_topology_name(self):
         return (f"{self._get_topo_name()}_k{self.k}_n{self.n}"
