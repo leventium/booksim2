@@ -107,3 +107,4 @@ class MultiSimRunner:
                 sess.commit()
 
         sync_bar.bar.close()
+        logger.info("Done.")
