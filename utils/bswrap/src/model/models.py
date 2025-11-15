@@ -1,39 +1,41 @@
-from sqlmodel import SQLModel, Field, Relationship
+from dataclasses import dataclass
 
 
-class Topology(SQLModel, table=True):
-    id: int | None = Field(default=None, primary_key=True)
+@dataclass
+class Topology:
     name: str
     num_nodes: int
     links: str
 
-    configs: list["Config"] = Relationship(back_populates="topo",
-                                           cascade_delete=True)
+    def to_dict(self) -> dict:
+        return {
+            "topo_name": self.name,
+            "topo_num_nodes": self.num_nodes,
+            "topo_links": self.links,
+        }
 
 
-class Config(SQLModel, table=True):
-    id: int | None = Field(default=None, primary_key=True)
-    topo_id: int | None = Field(default=None,
-                                foreign_key="topology.id",
-                                ondelete="CASCADE")
+@dataclass
+class Config:
+    topo: Topology
+
     routing_function: str
     traffic_type: str
     sim_count: int
 
-    topo: Topology = Relationship(back_populates="configs")
-    result: "Result" = Relationship(
-        sa_relationship_kwargs={"uselist": False},
-        back_populates="config",
-        cascade_delete=True,
-    )
+    def to_dict(self) -> dict:
+        d = {
+            "cfg_routing_func": self.routing_function,
+            "cfg_traffic_type": self.traffic_type,
+            "cfg_sim_count": self.sim_count,
+        }
+        d.update(self.topo.to_dict())
+        return d
 
 
-class Result(SQLModel, table=True):
-    id: int | None = Field(default=None, primary_key=True)
-    config_id: int | None = Field(default=None,
-                                  foreign_key="config.id",
-                                  unique=True,
-                                  ondelete="CASCADE")
+@dataclass
+class Result:
+    config: Config
 
     packet_latency_min: float
     packet_latency_max: float
@@ -63,4 +65,8 @@ class Result(SQLModel, table=True):
     accepted_packet_size_avg: float
     hops_avg: float
 
-    config: Config = Relationship(back_populates="result")
+    def to_dict(self) -> dict:
+        d = self.__dict__.copy()
+        d.pop("config")
+        d.update(self.config.to_dict())
+        return d

@@ -3,10 +3,8 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
 from dataclasses import dataclass
 from itertools import product
-from model import Topology, Config, Result
+from model import Topology, Config, Result, IResultRepo
 from simulator import SimRunner, BadSimSummary, SimSummaryNotFound
-from sqlmodel import Session
-from sqlalchemy import Engine
 from loguru import logger
 from tqdm import tqdm
 
@@ -73,18 +71,9 @@ class MultiSimRunner:
 
     @staticmethod
     def run(simulator_path: Path, tasks: list[SimulationTask],
-            configs_dir: Path, engine: Engine, jobs: int):
+            configs_dir: Path, repo: IResultRepo, jobs: int):
         logger.info("Preparing configurations.")
         configs = MultiSimRunner._generate_configs(tasks)
-
-        logger.info("Registering configs.")
-        with Session(engine) as sess:
-            for cfg in configs:
-                sess.add(cfg)
-            sess.commit()
-            for cfg in configs:
-                sess.refresh(cfg)
-                tmp = cfg.topo
 
         logger.info("Starting simulations.")
         sync_bar = ProgressBarSync(tqdm(total=len(configs)), Lock())
@@ -100,11 +89,8 @@ class MultiSimRunner:
                 configs
             )
 
-            with Session(engine) as sess:
-                for res in results:
-                    if res is not None:
-                        sess.add(res)
-                sess.commit()
+            for res in results:
+                repo.save(res)
 
         sync_bar.bar.close()
         logger.info("Done.")
