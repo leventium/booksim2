@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from models import Result
+from .models import Result
 
 
 class IResultRepo(ABC):

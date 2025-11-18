@@ -1,7 +1,7 @@
 import csv
 from pathlib import Path
-from models import Result
-from iface import IResultRepo
+from .models import Result
+from .iface import IResultRepo
 
 
 class CSVResultRepo(IResultRepo):
