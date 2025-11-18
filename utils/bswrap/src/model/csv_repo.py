@@ -46,12 +46,15 @@ class CSVResultRepo(IResultRepo):
         self._header_printed = False
 
     def save(self, obj: Result) -> None:
+        if not isinstance(obj, Result):
+            raise ValueError("Supplied object must be "
+                             "instance of Result class")
         with open(self._savefile, "a") as file:
             writer = csv.DictWriter(file, self._headers)
             if not self._header_printed:
                 self._header_printed = True
                 writer.writeheader()
-            writer.writerow(obj.__dict__.copy())
+            writer.writerow(obj.to_dict())
 
     def close(self) -> None:
         pass

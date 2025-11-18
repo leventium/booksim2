@@ -1,3 +1,4 @@
+import sys
 import shutil
 import argparse
 from pathlib import Path
@@ -33,7 +34,9 @@ if __name__ == "__main__":
         shutil.rmtree(configs_dir)
     configs_dir.mkdir()
 
-    logger.level("INFO")
+    logger.remove()
+    logger.add(sys.stderr, level="ERROR")
+    logger.add("bswrap.log", level="INFO")
     repo = CSVResultRepo(args.output.absolute())
 
     MultiSimRunner.run(

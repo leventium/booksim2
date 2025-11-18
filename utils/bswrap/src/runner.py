@@ -65,7 +65,7 @@ class MultiSimRunner:
         try:
             return simulator.sim(cfg, cfgs_dir)
         except (BadSimSummary, SimSummaryNotFound):
-            logger.error(f"Error occured on config {cfg}")
+            logger.warning(f"Error occured on config {cfg}")
 
         return None
 
@@ -90,7 +90,8 @@ class MultiSimRunner:
             )
 
             for res in results:
-                repo.save(res)
+                if res is not None:
+                    repo.save(res)
 
         sync_bar.bar.close()
         logger.info("Done.")
