@@ -5,6 +5,11 @@ from .iface import IResultRepo
 
 
 class CSVResultRepo(IResultRepo):
+    """
+    CSV implementation of Result Repository.
+    Opens file on each save.
+    NOT THREAD-SAFE!
+    """
     _headers = [
         "topo_name",
         "topo_num_nodes",

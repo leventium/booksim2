@@ -3,6 +3,9 @@ from dataclasses import dataclass
 
 @dataclass
 class Topology:
+    """
+    Class representing topologies for network-on-chips.
+    """
     name: str
     num_nodes: int
     links: str
@@ -17,6 +20,9 @@ class Topology:
 
 @dataclass
 class Config:
+    """
+    Class representing simulation configuration.
+    """
     routing_function: str
     traffic_type: str
     sim_count: int
@@ -35,6 +41,9 @@ class Config:
 
 @dataclass
 class Result:
+    """
+    Class representing simulation result.
+    """
     packet_latency_min: float
     packet_latency_max: float
     packet_latency_avg: float
