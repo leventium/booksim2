@@ -66,6 +66,8 @@ class MultiSimRunner:
             return simulator.sim(cfg, cfgs_dir)
         except (BadSimSummary, SimSummaryNotFound):
             logger.warning(f"Error occured on config {cfg}")
+        except ValueError:
+            logger.warning(f"Error on circulant config: {cfg.topo}")
 
         return None
 
