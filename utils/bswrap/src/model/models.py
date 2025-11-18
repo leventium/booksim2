@@ -17,11 +17,11 @@ class Topology:
 
 @dataclass
 class Config:
-    topo: Topology
-
     routing_function: str
     traffic_type: str
     sim_count: int
+
+    topo: Topology | None = None
 
     def to_dict(self) -> dict:
         d = {
@@ -35,8 +35,6 @@ class Config:
 
 @dataclass
 class Result:
-    config: Config
-
     packet_latency_min: float
     packet_latency_max: float
     packet_latency_avg: float
@@ -64,6 +62,8 @@ class Result:
     injected_packet_size_avg: float
     accepted_packet_size_avg: float
     hops_avg: float
+
+    config: Config | None = None
 
     def to_dict(self) -> dict:
         d = self.__dict__.copy()
