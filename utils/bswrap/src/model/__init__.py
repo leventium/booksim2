@@ -1,3 +1,3 @@
-from .models import Topology, Config, Result
-from .iface import IResultRepo
-from .csv_repo import CSVResultRepo
+from .models import Topology, Config, Result  # noqa
+from .iface import IResultRepo  # noqa
+from .csv_repo import CSVResultRepo  # noqa

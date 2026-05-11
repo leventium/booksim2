@@ -29,8 +29,7 @@ class Circulant:
 
     def __init__(self, num_nodes: int, links: list[int]):
         if num_nodes < 3:
-            raise ValueError(
-                f"Error in N: N cannot be less than 3, actual {num_nodes}")
+            raise ValueError(f"Error in N: N cannot be less than 3, actual {num_nodes}")
         max_link_index = (num_nodes // 2) - (1 - num_nodes % 2)
         for i, link in enumerate(links):
             if not (1 <= link <= max_link_index):
@@ -40,7 +39,8 @@ class Circulant:
                 )
 
         self._nodes: list[CirculantNode] = self._build_circulant(
-            num_nodes, sorted(list(set(links))))
+            num_nodes, sorted(list(set(links)))
+        )
 
     def serialize_booksim(self) -> str:
         res = ""
@@ -50,7 +50,7 @@ class Circulant:
                 res += f" router {link_id}"
             res += "\n"
         return res
-    
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

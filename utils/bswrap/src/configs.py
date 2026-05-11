@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
-from pathlib import Path
 from dataclasses import dataclass
-from circulant_builder import Circulant
+from pathlib import Path
 
+from circulant_builder import Circulant
 
 # class RoutingFunc(StrEnum):
 #     min = "min"
@@ -44,9 +44,9 @@ vc_buf_size      = 4;
         return self.config_template.format(
             routing_func=conf.routing_func,
             traffic_type=conf.traffic,
-            sim_count=conf.sim_count
+            sim_count=conf.sim_count,
         )
-    
+
     def get_indep_namepart(self, conf: TopoIndependentConfig):
         return f"_F{conf.routing_func}_T{conf.traffic}_S{conf.sim_count}"
 
@@ -68,8 +68,8 @@ topology = anynet;
 network_file = {anynet_filename};
 
 """
-    def __init__(self, num_nodes: int, links: list[int],
-                 config: TopoIndependentConfig):
+
+    def __init__(self, num_nodes: int, links: list[int], config: TopoIndependentConfig):
         self.circulant = Circulant(num_nodes, links)
         self.num_nodes = num_nodes
         self.links = links
@@ -77,11 +77,8 @@ network_file = {anynet_filename};
 
     @staticmethod
     def new_config(
-            num_nodes: int,
-            links: str,
-            routing_func: str,
-            traffic_type: str,
-            sim_count: int) -> ISimConfig:
+        num_nodes: int, links: str, routing_func: str, traffic_type: str, sim_count: int
+    ) -> ISimConfig:
         return CirculantConfig(
             num_nodes,
             list(map(int, links.split(","))),
@@ -148,8 +145,9 @@ n = {n};
         return config_path
 
     def get_topology_name(self):
-        return (f"{self._get_topo_name()}_k{self.k}_n{self.n}"
-                + self.get_indep_namepart(self.conf))
+        return f"{self._get_topo_name()}_k{self.k}_n{self.n}" + self.get_indep_namepart(
+            self.conf
+        )
 
 
 class MeshConfig(CellTopoConfig):
@@ -169,12 +167,13 @@ class TorusConfig(CellTopoConfig):
 
 
 def new_cell_config(
-        cls,
-        num_nodes: int,
-        links: str,
-        routing_func: str,
-        traffic_type: str,
-        sim_count: int) -> ISimConfig:
+    cls,
+    num_nodes: int,
+    links: str,
+    routing_func: str,
+    traffic_type: str,
+    sim_count: int,
+) -> ISimConfig:
     parsed_links = list(map(int, links.split(",")))
     return cls(
         parsed_links[0],

@@ -1,7 +1,8 @@
 import csv
 from pathlib import Path
-from .models import Result
+
 from .iface import IResultRepo
+from .models import Result
 
 
 class CSVResultRepo(IResultRepo):
@@ -10,6 +11,7 @@ class CSVResultRepo(IResultRepo):
     Opens file on each save.
     NOT THREAD-SAFE!
     """
+
     _headers = [
         "topo_name",
         "topo_num_nodes",
@@ -52,8 +54,7 @@ class CSVResultRepo(IResultRepo):
 
     def save(self, obj: Result) -> None:
         if not isinstance(obj, Result):
-            raise ValueError("Supplied object must be "
-                             "instance of Result class")
+            raise ValueError("Supplied object must be instance of Result class")
         with open(self._savefile, "a") as file:
             writer = csv.DictWriter(file, self._headers)
             if not self._header_printed:
