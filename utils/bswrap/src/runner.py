@@ -1,12 +1,15 @@
-from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
-from threading import Lock
 from dataclasses import dataclass
 from itertools import product
-from model import Topology, Config, Result, IResultRepo
-from simulator import SimRunner, BadSimSummary, SimSummaryNotFound
+from pathlib import Path
+from threading import Lock
+from typing import Callable
+
 from loguru import logger
 from tqdm import tqdm
+
+from model import Config, IResultRepo, Result, Topology
+from simulator import BadSimSummary, SimRunner, SimSummaryNotFound
 
 
 @dataclass
@@ -19,7 +22,17 @@ class ProgressBarSync:
 class SimulationTask:
     topo_names: list[str]
     num_nodes: list[int]
-    links: list[int]
+    links: list[str]
+
+    routing_funcs: list[str]
+    traffic_types: list[str]
+    sim_counts: list[int]
+
+
+@dataclass
+class SimulationTaskAnytopo:
+    topo: Callable
+    topo_args: list[tuple]
 
     routing_funcs: list[str]
     traffic_types: list[str]
@@ -35,26 +48,35 @@ class MultiSimRunner:
             topos: list[Topology] = []
 
             for args in product(task.topo_names, task.num_nodes, task.links):
-                topos.append(Topology(
-                    name=args[0],
-                    num_nodes=args[1],
-                    links=args[2],
-                ))
-            
-            for args in product(topos, task.routing_funcs,
-                                task.traffic_types, task.sim_counts):
-                res.append(Config(
-                    topo=args[0],
-                    routing_function=args[1],
-                    traffic_type=args[2],
-                    sim_count=args[3],
-                ))
+                topos.append(
+                    Topology(
+                        name=args[0],
+                        num_nodes=args[1],
+                        links=args[2],
+                    )
+                )
+
+            for args in product(
+                topos, task.routing_funcs, task.traffic_types, task.sim_counts
+            ):
+                res.append(
+                    Config(
+                        topo=args[0],
+                        routing_function=args[1],
+                        traffic_type=args[2],
+                        sim_count=args[3],
+                    )
+                )
 
         return res
 
     @staticmethod
-    def _worker(cfg: Config, simulator: SimRunner, cfgs_dir: Path,
-                sync_bar: ProgressBarSync) -> Result | None:
+    def _worker(
+        cfg: Config, simulator: SimRunner, cfgs_dir: Path, sync_bar: ProgressBarSync
+    ) -> Result | None:
+        if cfg.topo is None:
+            raise ValueError("Topology must be specified in config.")
+
         with sync_bar.mx:
             sync_bar.bar.set_description(
                 f"Processing '{cfg.topo.name}_N{cfg.topo.num_nodes}_"
@@ -72,8 +94,13 @@ class MultiSimRunner:
         return None
 
     @staticmethod
-    def run(simulator_path: Path, tasks: list[SimulationTask],
-            configs_dir: Path, repo: IResultRepo, jobs: int):
+    def run(
+        simulator_path: Path,
+        tasks: list[SimulationTask],
+        configs_dir: Path,
+        repo: IResultRepo,
+        jobs: int,
+    ):
         logger.info("Preparing configurations.")
         configs = MultiSimRunner._generate_configs(tasks)
 
@@ -84,11 +111,9 @@ class MultiSimRunner:
         with ThreadPoolExecutor(max_workers=jobs) as pool:
             results = pool.map(
                 lambda cfg: MultiSimRunner._worker(
-                    cfg,
-                    simulator,
-                    configs_dir,
-                    sync_bar),
-                configs
+                    cfg, simulator, configs_dir, sync_bar
+                ),
+                configs,
             )
 
             for res in results:

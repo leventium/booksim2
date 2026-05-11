@@ -1,14 +1,10 @@
-import re
 import io
+import re
 import subprocess as sp
 from pathlib import Path
+
+from configs import CirculantConfig, ISimConfig, new_mesh_config, new_torus_config
 from model import Config, Result
-from configs import (
-    ISimConfig,
-    CirculantConfig,
-    new_mesh_config,
-    new_torus_config
-)
 
 
 class BadSimSummary(Exception):
@@ -29,17 +25,21 @@ class SimRunner:
 
     def __init__(self, booksim_exec: Path):
         self._exec = booksim_exec.absolute()
-    
+
     def _get_float_from_line(self, line: str) -> float:
-        return float(self._FEATURE_RE.search(line)[1])
-    
+        search_res = self._FEATURE_RE.search(line)
+        if search_res is None:
+            raise ValueError("Float number wasn't found.")
+
+        return float(search_res[1])
+
     def _parse_simulator_output(self, stream: io.StringIO) -> Result:
         line = stream.readline()
         while line != "" and line != "====== Traffic class 0 ======\n":
             line = stream.readline()
         if line == "":
             raise SimSummaryNotFound()
-        
+
         try:
             return Result(
                 packet_latency_min=self._get_float_from_line(stream.readline()),
@@ -74,6 +74,9 @@ class SimRunner:
             raise BadSimSummary()
 
     def _get_simulator_config(self, config: Config) -> ISimConfig:
+        if config.topo is None:
+            raise ValueError("Topology must be specified in config.")
+
         return self._CONFIG_CONSTRUCTORS[config.topo.name](
             config.topo.num_nodes,
             config.topo.links,
@@ -90,7 +93,6 @@ class SimRunner:
             shell=True,
             capture_output=True,
         )
-        res = self._parse_simulator_output(
-            io.StringIO(sim_output.stdout.decode()))
+        res = self._parse_simulator_output(io.StringIO(sim_output.stdout.decode()))
         res.config = config
         return res
