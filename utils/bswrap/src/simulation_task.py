@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from topology_iface import ITopology
+from topology import ITopology
 
 
 @dataclass
