@@ -1,12 +1,12 @@
 from itertools import product
 
 from model import Config, Topology
-from simulation_task import SimulationTask
+from simulation_task import SimulationTaskLegacy
 
 
 class ConfigGenerator:
     @staticmethod
-    def generate_configs(tasks: list[SimulationTask]) -> list[Config]:
+    def generate_configs(tasks: list[SimulationTaskLegacy]) -> list[Config]:
         res: list[Config] = []
 
         for task in tasks:

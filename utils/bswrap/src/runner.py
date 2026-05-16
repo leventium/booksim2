@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 from config_generator import ConfigGenerator
 from model import Config, IResultRepo, Result
-from simulation_task import SimulationTask
+from simulation_task import SimulationTaskLegacy
 from simulator import BadSimSummary, SimRunner, SimSummaryNotFound
 
 
@@ -45,7 +45,7 @@ class MultiSimRunner:
     @staticmethod
     def run(
         simulator_path: Path,
-        tasks: list[SimulationTask],
+        tasks: list[SimulationTaskLegacy],
         configs_dir: Path,
         repo: IResultRepo,
         jobs: int,
