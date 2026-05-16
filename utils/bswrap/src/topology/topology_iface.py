@@ -24,7 +24,7 @@ class ITopology(ABC):
     @abstractmethod
     def get_topology_graph(self) -> list[TopoNode]:
         """
-        Return list of 'TopoNode' objects representing all the nodes
+        Returns list of 'TopoNode' objects representing all the nodes
         and its links in topology.
         """
         pass
@@ -33,6 +33,13 @@ class ITopology(ABC):
     def get_topology_num_nodes(self) -> int:
         """
         Returns a number of nodes in topology.
+        """
+        pass
+
+    @abstractmethod
+    def get_topology_name(self) -> str:
+        """
+        Returns name of topology.
         """
         pass
 
@@ -51,3 +58,10 @@ class ITopology(ABC):
         It will be used in 'topo_args' field in CSV result.
         """
         pass
+
+    def to_dict(self) -> dict:
+        return {
+            "topo_name": self.get_topology_name(),
+            "topo_num_nodes": self.get_topology_num_nodes(),
+            "topo_args": self.get_topology_arguments(),
+        }
