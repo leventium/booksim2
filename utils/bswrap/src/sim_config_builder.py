@@ -1,5 +1,10 @@
-from configs import CirculantConfig, ISimConfig, new_mesh_config, new_torus_config
 from model import Config
+from simulation_configs import (
+    CirculantConfig,
+    ISimConfig,
+    new_mesh_config,
+    new_torus_config,
+)
 
 
 class SimConfigBuilder:
