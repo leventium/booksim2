@@ -59,6 +59,10 @@ vc_buf_size      = 4;
 
     @abstractmethod
     def get_topology_name(self) -> str:
+        """
+        Creates configuration string descriptor.
+        Must display all the parameters of its configuration.
+        """
         pass
 
 
