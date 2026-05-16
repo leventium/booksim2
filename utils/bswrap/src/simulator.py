@@ -3,8 +3,8 @@ import re
 import subprocess as sp
 from pathlib import Path
 
-from configs import CirculantConfig, ISimConfig, new_mesh_config, new_torus_config
 from model import Config, Result
+from sim_config_builder import SimConfigBuilder
 
 
 class BadSimSummary(Exception):
@@ -16,11 +16,6 @@ class SimSummaryNotFound(Exception):
 
 
 class SimRunner:
-    _CONFIG_CONSTRUCTORS = {
-        "circulant": CirculantConfig.new_config,
-        "mesh": new_mesh_config,
-        "torus": new_torus_config,
-    }
     _FEATURE_RE = re.compile(r"\.*= ([+-]?\d+(\.\d+(e[+-]?\d+)?)?)")
 
     def __init__(self, booksim_exec: Path):
@@ -73,20 +68,8 @@ class SimRunner:
         except ValueError:
             raise BadSimSummary()
 
-    def _get_simulator_config(self, config: Config) -> ISimConfig:
-        if config.topo is None:
-            raise ValueError("Topology must be specified in config.")
-
-        return self._CONFIG_CONSTRUCTORS[config.topo.name](
-            config.topo.num_nodes,
-            config.topo.links,
-            config.routing_function,
-            config.traffic_type,
-            config.sim_count,
-        )
-
     def sim(self, config: Config, configs_dir: Path) -> Result:
-        sim_config = self._get_simulator_config(config)
+        sim_config = SimConfigBuilder.get_simulator_config(config)
         config_path = sim_config.create_config(configs_dir.absolute())
         sim_output = sp.run(
             f"{self._exec} {config_path} 2>&1",
