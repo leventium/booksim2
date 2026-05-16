@@ -1,14 +1,14 @@
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from itertools import product
 from pathlib import Path
 from threading import Lock
-from typing import Callable
 
 from loguru import logger
 from tqdm import tqdm
 
-from model import Config, IResultRepo, Result, Topology
+from config_generator import ConfigGenerator
+from model import Config, IResultRepo, Result
+from simulation_task import SimulationTask
 from simulator import BadSimSummary, SimRunner, SimSummaryNotFound
 
 
@@ -18,58 +18,7 @@ class ProgressBarSync:
     mx: Lock
 
 
-@dataclass
-class SimulationTask:
-    topo_names: list[str]
-    num_nodes: list[int]
-    links: list[str]
-
-    routing_funcs: list[str]
-    traffic_types: list[str]
-    sim_counts: list[int]
-
-
-@dataclass
-class SimulationTaskAnytopo:
-    topo: Callable
-    topo_args: list[tuple]
-
-    routing_funcs: list[str]
-    traffic_types: list[str]
-    sim_counts: list[int]
-
-
 class MultiSimRunner:
-    @staticmethod
-    def _generate_configs(tasks: list[SimulationTask]) -> list[Config]:
-        res: list[Config] = []
-
-        for task in tasks:
-            topos: list[Topology] = []
-
-            for args in product(task.topo_names, task.num_nodes, task.links):
-                topos.append(
-                    Topology(
-                        name=args[0],
-                        num_nodes=args[1],
-                        args=args[2],
-                    )
-                )
-
-            for args in product(
-                topos, task.routing_funcs, task.traffic_types, task.sim_counts
-            ):
-                res.append(
-                    Config(
-                        topo=args[0],
-                        routing_function=args[1],
-                        traffic_type=args[2],
-                        sim_count=args[3],
-                    )
-                )
-
-        return res
-
     @staticmethod
     def _worker(
         cfg: Config, simulator: SimRunner, cfgs_dir: Path, sync_bar: ProgressBarSync
@@ -102,7 +51,7 @@ class MultiSimRunner:
         jobs: int,
     ):
         logger.info("Preparing configurations.")
-        configs = MultiSimRunner._generate_configs(tasks)
+        configs = ConfigGenerator.generate_configs(tasks)
 
         logger.info("Starting simulations.")
         sync_bar = ProgressBarSync(tqdm(total=len(configs)), Lock())
