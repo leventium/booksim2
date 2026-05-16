@@ -15,7 +15,7 @@ class CSVResultRepo(IResultRepo):
     _headers = [
         "topo_name",
         "topo_num_nodes",
-        "topo_links",
+        "topo_args",
         "cfg_routing_func",
         "cfg_traffic_type",
         "cfg_sim_count",

@@ -9,13 +9,13 @@ class Topology:
 
     name: str
     num_nodes: int
-    links: str
+    args: str
 
     def to_dict(self) -> dict:
         return {
             "topo_name": self.name,
             "topo_num_nodes": self.num_nodes,
-            "topo_links": self.links,
+            "topo_args": self.args,
         }
 
 

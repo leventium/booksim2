@@ -52,7 +52,7 @@ class MultiSimRunner:
                     Topology(
                         name=args[0],
                         num_nodes=args[1],
-                        links=args[2],
+                        args=args[2],
                     )
                 )
 
