@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from circulant_builder import Circulant
+from model import Config
+from topology import ITopology
 
 # class RoutingFunc(StrEnum):
 #     min = "min"
@@ -64,6 +66,50 @@ vc_buf_size      = 4;
         Must display all the parameters of its configuration.
         """
         pass
+
+
+class AnyConfig(ISimConfig):
+    topo_config = """\
+topology = anynet;
+network_file = {anynet_filename};
+
+"""
+
+    def __init__(self, config: Config) -> None:
+        if not isinstance(config.topo, ITopology):
+            raise ValueError("Topology in config must implement ITopology.")
+        self._config = config
+        self._topo = config.topo
+        self._indep_conf = TopoIndependentConfig(
+            routing_func=self._config.routing_function,
+            traffic=self._config.traffic_type,
+            sim_count=self._config.sim_count,
+        )
+
+    def create_config(self, configs_dir: Path) -> Path:
+        topology_path = configs_dir.joinpath("topo_" + self.get_topology_name())
+        config_path = configs_dir.joinpath("config_" + self.get_topology_name())
+
+        with open(topology_path, "w") as file:
+            topo_graph = self._topo.get_topology_graph()
+            for node in topo_graph:
+                file.write(f"router {node.node_id} node {node.node_id}")
+                for node_link in node.links:
+                    file.write(f" router {node_link.node_id}")
+                file.write("\n")
+
+        with open(config_path, "w") as file:
+            config_content = self.topo_config.format(
+                anynet_filename=topology_path,
+            ) + self._fill_base_config(self._indep_conf)
+            file.write(config_content)
+
+        return config_path
+
+    def get_topology_name(self) -> str:
+        return self._topo.get_topology_descriptor() + self.get_indep_namepart(
+            self._indep_conf
+        )
 
 
 class CirculantConfig(ISimConfig):
