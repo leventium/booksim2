@@ -13,9 +13,27 @@ class Config:
     traffic_type: str
     sim_count: int
 
-    topo: Topology | None = None
+    topo: ITopology | Topology | None = None
+
+    def get_description(self) -> str:
+        if self.topo is None:
+            raise ValueError("Topology must be specified.")
+        topo_name = (
+            self.topo.get_topology_name()
+            if isinstance(self.topo, ITopology)
+            else self.topo.name
+        )
+        topo_num_nodes = (
+            self.topo.get_topology_num_nodes()
+            if isinstance(self.topo, ITopology)
+            else self.topo.num_nodes
+        )
+        return f"{topo_name}_N{topo_num_nodes}_R{self.routing_function}"
 
     def to_dict(self) -> dict:
+        if self.topo is None:
+            raise ValueError("No topology specified.")
+
         d = {
             "cfg_routing_func": self.routing_function,
             "cfg_traffic_type": self.traffic_type,

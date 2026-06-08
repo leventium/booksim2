@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
@@ -8,7 +9,7 @@ from tqdm import tqdm
 
 from config_generator import ConfigGenerator
 from model import Config, IResultRepo, Result
-from simulation_task import SimulationTaskLegacy
+from simulation_task import SimulationTask, SimulationTaskLegacy
 from simulator import BadSimSummary, SimRunner, SimSummaryNotFound
 
 
@@ -27,10 +28,7 @@ class MultiSimRunner:
             raise ValueError("Topology must be specified in config.")
 
         with sync_bar.mx:
-            sync_bar.bar.set_description(
-                f"Processing '{cfg.topo.name}_N{cfg.topo.num_nodes}_"
-                f"R{cfg.routing_function}'"
-            )
+            sync_bar.bar.set_description(f"Processing {cfg.get_description()}")
             sync_bar.bar.update()
 
         try:
@@ -45,7 +43,7 @@ class MultiSimRunner:
     @staticmethod
     def run(
         simulator_path: Path,
-        tasks: list[SimulationTaskLegacy],
+        tasks: Sequence[SimulationTask | SimulationTaskLegacy],
         configs_dir: Path,
         repo: IResultRepo,
         jobs: int,
