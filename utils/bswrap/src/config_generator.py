@@ -1,36 +1,48 @@
+from collections.abc import Sequence
 from itertools import product
 
-from model import Config, Topology
-from simulation_task import SimulationTaskLegacy
+from model import Config
+from simulation_task import SimulationTask, SimulationTaskLegacy
+from topology import Topology
 
 
 class ConfigGenerator:
     @staticmethod
-    def generate_configs(tasks: list[SimulationTaskLegacy]) -> list[Config]:
+    def _get_topo_permutation(task: SimulationTaskLegacy) -> list[Topology]:
+        return [
+            Topology(name, num_nodes, args)
+            for name, num_nodes, args in product(
+                task.topo_names, task.num_nodes, task.links
+            )
+        ]
+
+    @staticmethod
+    def generate_configs(
+        tasks: Sequence[SimulationTask | SimulationTaskLegacy],
+    ) -> list[Config]:
         res: list[Config] = []
 
         for task in tasks:
-            topos: list[Topology] = []
-
-            for args in product(task.topo_names, task.num_nodes, task.links):
-                topos.append(
-                    Topology(
-                        name=args[0],
-                        num_nodes=args[1],
-                        args=args[2],
-                    )
-                )
-
-            for args in product(
-                topos, task.routing_funcs, task.traffic_types, task.sim_counts
-            ):
-                res.append(
+            topo_list = (
+                task.topo
+                if isinstance(task, SimulationTask)
+                else ConfigGenerator._get_topo_permutation(task)
+            )
+            res.extend(
+                [
                     Config(
-                        topo=args[0],
-                        routing_function=args[1],
-                        traffic_type=args[2],
-                        sim_count=args[3],
+                        topo=topo,
+                        routing_function=route_func,
+                        traffic_type=traffic,
+                        sim_count=sim_count,
                     )
-                )
+                    for topo, route_func, traffic, sim_count in product(
+                        topo_list,
+                        task.routing_funcs,
+                        task.traffic_types,
+                        task.sim_counts,
+                    )
+                ]
+            )
 
         return res
